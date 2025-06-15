@@ -15,8 +15,13 @@ serve(async () => {
   const prices = [];
 
   // 🔶 1. Crypto via CoinGecko
-  const coingecko = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=eur");
-  const crypto = await coingecko.json();
+  const coingeckoRes = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=eur");
+  if (!coingeckoRes.ok) {
+    const message = await coingeckoRes.text();
+    console.error("Failed fetching from CoinGecko", message);
+    return new Response("Failed fetching crypto prices", { status: 502 });
+  }
+  const crypto = await coingeckoRes.json();
   prices.push({ asset: "BTC", category: "crypto", price: crypto.bitcoin.eur, currency: "EUR", timestamp: isoNow });
   prices.push({ asset: "ETH", category: "crypto", price: crypto.ethereum.eur, currency: "EUR", timestamp: isoNow });
 
@@ -27,6 +32,11 @@ serve(async () => {
       "X-RapidAPI-Host": "yh-finance.p.rapidapi.com"
     }
   });
+  if (!yahooRes.ok) {
+    const message = await yahooRes.text();
+    console.error("Failed fetching from Yahoo Finance", message);
+    return new Response("Failed fetching ETF prices", { status: 502 });
+  }
   const yahooData = await yahooRes.json();
   for (const quote of yahooData.quoteResponse.result) {
     prices.push({
@@ -44,6 +54,11 @@ serve(async () => {
       "x-access-token": Deno.env.get("GOLDAPI_KEY")!
     }
   });
+  if (!goldRes.ok) {
+    const message = await goldRes.text();
+    console.error("Failed fetching from GoldAPI", message);
+    return new Response("Failed fetching gold price", { status: 502 });
+  }
   const gold = await goldRes.json();
   prices.push({
     asset: "GOLD",
